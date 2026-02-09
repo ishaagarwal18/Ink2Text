@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ink2Text - Convert Handwriting to Digital Text</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --background: #faf8f6;
+            --foreground: #2e2622;
+            --card: #ffffff;
+            --card-foreground: #2e2622;
+            --primary: #5d4a8e;
+            --primary-foreground: #faf8f6;
+            --secondary: #6b5a8c;
+            --muted: #e8e3db;
+            --muted-foreground: #7a6f66;
+            --border: #e8e3db;
+            --accent: #8b7ab5;
+            --radius: 10px;
+        }
+
+        html.dark {
+            --background: #1e1a17;
+            --foreground: #f2ede6;
+            --card: #29241f;
+            --card-foreground: #f2ede6;
+            --primary: #a89fd9;
+            --primary-foreground: #1e1a17;
+            --secondary: #9d91c7;
+            --muted: #3e3935;
+            --muted-foreground: #9d9790;
+            --border: #3e3935;
+            --accent: #bfb3e0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            background: var(--background);
+            color: var(--foreground);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* Navigation */
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background: rgba(250, 248, 246, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            transition: background 0.3s;
+        }
+
+        html.dark nav {
+            background: rgba(30, 26, 23, 0.8);
+        }
+
+        .navbar {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--foreground);
+            text-decoration: none;
+        }
+
+        .nav-logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: var(--muted-foreground);
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: var(--foreground);
+        }
+
+        .nav-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        button {
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: transparent;
+            color: var(--foreground);
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        button.primary {
+            background: var(--primary);
+            color: var(--primary-foreground);
+            border: none;
+        }
+
+        button.primary:hover {
+            opacity: 0.9;
+        }
+
+        button:hover {
+            border-color: var(--foreground);
+        }
+
+        .theme-toggle {
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        /* Main content */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        /* Home Page */
+        .hero {
+            text-align: center;
+            margin-bottom: 60px;
+            padding: 40px 0;
+        }
+
+        .hero h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: var(--foreground);
+        }
+
+        .hero p {
+            font-size: 18px;
+            color: var(--muted-foreground);
+            max-width: 600px;
+            margin: 0 auto 30px;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 60px;
+        }
+
+        .feature-card {
+            background: var(--card);
+            padding: 30px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .feature-icon {
+            font-size: 32px;
+            margin-bottom: 15px;
+        }
+
+        .feature-card h3 {
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: var(--foreground);
+        }
+
+        .feature-card p {
+            font-size: 14px;
+            color: var(--muted-foreground);
+        }
+
+        /* Auth Pages */
+        .auth-container {
+            max-width: 400px;
+            margin: 40px auto;
+        }
+
+        .auth-card {
+            background: var(--card);
+            padding: 40px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+        }
+
+        .auth-card h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: var(--foreground);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--foreground);
+        }
+
+        input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--background);
+            color: var(--foreground);
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(93, 74, 142, 0.1);
+        }
+
+        .auth-submit {
+            width: 100%;
+            padding: 12px;
+            background: var(--primary);
+            color: var(--primary-foreground);
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.3s;
+            margin-top: 20px;
+        }
+
+        .auth-submit:hover {
+            opacity: 0.9;
+        }
+
+        .auth-link {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+            color: var(--muted-foreground);
+        }
+
+        .auth-link a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        /* Converter Page */
+        .converter-wrapper {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .upload-area {
+            background: var(--card);
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .upload-area:hover {
+            border-color: var(--primary);
+            background: rgba(93, 74, 142, 0.05);
+        }
+
+        .upload-area.dragover {
+            border-color: var(--primary);
+            background: rgba(93, 74, 142, 0.1);
+        }
+
+        #imagePreview {
+            max-width: 100%;
+            border-radius: var(--radius);
+            margin-top: 20px;
+            display: none;
+        }
+
+        .text-output {
+            background: var(--card);
+            padding: 20px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #extractedText {
+            flex: 1;
+            padding: 15px;
+            background: var(--background);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--foreground);
+            font-family: 'Courier New', monospace;
+            resize: none;
+            font-size: 14px;
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .button-group button {
+            padding: 10px;
+        }
+
+        /* -------- ABOUT PAGE STYLES -------- */
+
+        .about-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 24px;
+            margin-top: 30px;
+        }
+
+        .about-card {
+            position: relative;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 28px;
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        /* pseudo-element glow */
+        .about-card::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(
+                circle at top left,
+                rgba(93, 74, 142, 0.15),
+                transparent 70%
+            );
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .about-card:hover::before {
+            opacity: 1;
+        }
+
+        .about-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .about-card h3 {
+            margin-bottom: 12px;
+            font-size: 18px;
+            color: var(--foreground);
+        }
+
+        .about-card p,
+        .about-card li {
+            font-size: 14px;
+            color: var(--muted-foreground);
+        }
+
+        .about-card ul {
+            margin-left: 18px;
+        }
+
+        .about-hero {
+            position: relative;
+            padding: 40px;
+            border-radius: 18px;
+            background: linear-gradient(
+                135deg,
+                rgba(93, 74, 142, 0.15),
+                rgba(139, 122, 181, 0.15)
+            );
+            margin-bottom: 40px;
+            overflow: hidden;
+        }
+
+        .about-hero::after {
+            content: "";
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(255,255,255,0.35), transparent 70%);
+            top: -60px;
+            right: -60px;
+        }
+
+        .about-hero h1 {
+            margin-bottom: 15px;
+        }
+
+        .about-hero p {
+            max-width: 700px;
+            font-size: 16px;
+            color: var(--muted-foreground);
+        }
+
+
+
+        /* History */
+        .history-panel {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 30px;
+            display: none;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .history-panel.show {
+            display: block;
+        }
+
+        .history-item {
+            padding: 12px;
+            background: var(--background);
+            border-radius: 6px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .history-item:hover {
+            background: var(--muted);
+        }
+
+        .history-item-name {
+            font-weight: 500;
+            color: var(--foreground);
+            margin-bottom: 5px;
+        }
+
+        .history-item-preview {
+            font-size: 12px;
+            color: var(--muted-foreground);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .history-item-time {
+            font-size: 11px;
+            color: var(--muted-foreground);
+            margin-top: 5px;
+        }
+
+        /* Spinner */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid var(--muted);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--card);
+            padding: 16px 20px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            max-width: 300px;
+            animation: slideIn 0.3s ease-out;
+            z-index: 1000;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .converter-wrapper {
+                grid-template-columns: 1fr;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .hero h1 {
+                font-size: 32px;
+            }
+
+            button {
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <div class="navbar">
+            <a href="#" class="nav-logo" onclick="goToPage('home'); return false;">
+                <div class="nav-logo-icon">⚡</div>
+                <span>Ink2Text</span>
+            </a>
+            <div class="nav-links">
+                <a href="#" onclick="goToPage('home'); return false;">Home</a>
+                <a href="#" onclick="goToPage('converter'); return false;">Converter</a>
+                <a href="#" onclick="goToPage('about'); return false;">About</a>
+            </div>
+            <div class="nav-actions">
+                <div id="authButtons" style="display: flex; gap: 10px;">
+                    <button onclick="goToPage('login')">Login</button>
+                    <button class="primary" onclick="goToPage('signup')">Sign Up</button>
+                </div>
+                <div id="logoutButton" style="display: none;">
+                    <button class="primary" onclick="logout()">Logout</button>
+                </div>
+                <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">🌙</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Home Page -->
+        <div id="home" class="page active">
+            <div class="hero">
+                <h1>Turn Handwriting into Digital Text</h1>
+                <p>Smart OCR technology that converts your handwritten notes into editable, searchable digital text. Perfect for students, teachers, and professionals.</p>
+                <div class="hero-buttons">
+                    <button class="primary" onclick="goToPage('signup')">Get Started Free</button>
+                    <button onclick="document.getElementById('features').scrollIntoView({behavior: 'smooth'})">Learn More</button>
+                </div>
+            </div>
+
+            <div id="features" class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">✓</div>
+                    <h3>99% Accuracy</h3>
+                    <p>Advanced OCR algorithm delivers exceptional accuracy even with messy handwriting</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Lightning Fast</h3>
+                    <p>Process your documents in seconds, not minutes. Get results instantly</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">✏️</div>
+                    <h3>Editable Text</h3>
+                    <p>Get fully editable digital text that you can copy, modify, and share</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <h3>Secure & Private</h3>
+                    <p>All processing happens locally. Your data never leaves your device</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📥</div>
+                    <h3>Easy Download</h3>
+                    <p>Save your extracted text as .txt or .pdf with one click</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📚</div>
+                    <h3>History</h3>
+                    <p>Access all your previous conversions in the history panel</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Login Page -->
+        <div id="login" class="page">
+            <div class="auth-container">
+                <div class="auth-card">
+                    <h2>Login to Ink2Text</h2>
+                    <form onsubmit="handleLogin(event)">
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input type="email" id="loginEmail" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Password</label>
+                            <input type="password" id="loginPassword" required>
+                        </div>
+                        <button type="submit" class="auth-submit">Login</button>
+                    </form>
+                    <div class="auth-link">
+                        Don't have an account? <a href="#" onclick="goToPage('signup'); return false;">Sign up</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Signup Page -->
+        <div id="signup" class="page">
+            <div class="auth-container">
+                <div class="auth-card">
+                    <h2>Create Account</h2>
+                    <form onsubmit="handleSignup(event)">
+                        <div class="form-group">
+                            <label>Full Name</label>
+                            <input type="text" id="signupName" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input type="email" id="signupEmail" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Password</label>
+                            <input type="password" id="signupPassword" required minlength="8">
+                        </div>
+                        <div class="form-group">
+                            <label>Confirm Password</label>
+                            <input type="password" id="signupConfirm" required minlength="8">
+                        </div>
+                        <button type="submit" class="auth-submit">Sign Up</button>
+                    </form>
+                    <div class="auth-link">
+                        Already have an account? <a href="#" onclick="goToPage('login'); return false;">Login</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Converter Page -->
+        <div id="converter" class="page">
+            <h1 style="margin-bottom: 30px;">OCR Converter</h1>
+            
+            <button onclick="toggleHistory()" style="margin-bottom: 20px;">📜 History</button>
+            <div id="historyPanel" class="history-panel"></div>
+
+            <div class="converter-wrapper">
+                <div>
+                    <div class="upload-area" id="uploadArea">
+                        <div style="font-size: 48px; margin-bottom: 10px;">📁</div>
+                        <p style="font-weight: 500; margin-bottom: 5px;">Click to upload or drag & drop</p>
+                        <p style="font-size: 12px; color: var(--muted-foreground);">PNG, JPG, WebP up to 5MB</p>
+                        <input type="file" id="imageInput" accept="image/*" style="display: none;">
+                    </div>
+                    <img id="imagePreview">
+                </div>
+
+                <div class="text-output">
+                    <textarea id="extractedText" placeholder="Extracted text will appear here..."></textarea>
+                    <div class="button-group">
+                        <button onclick="copyText()">📋 Copy</button>
+                        <button onclick="saveAs()">💾 Save As</button>
+                        <button onclick="downloadText()">⬇️ Download</button>
+                        <button onclick="processImage()" id="processBtn">🔄 Process</button>
+                        <button onclick="resetConverter()">↻ Reset</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- About Page -->
+        <div id="about" class="page">
+
+            <!-- Hero Section -->
+            <div class="about-hero">
+                <h1>About Ink2Text</h1>
+                <p>
+                Ink2Text is a modern, full-stack OCR platform that transforms handwritten
+                and printed documents into clean, editable digital text using powerful
+                backend intelligence.
+                </p>
+            </div>
+
+            <!-- Cards Grid -->
+            <div class="about-grid">
+
+                <div class="about-card">
+                <h3>🧠 What Ink2Text Does</h3>
+                <p>
+                    Ink2Text converts handwritten or printed images into digital text by
+                    securely processing them through a backend OCR pipeline optimized for
+                    accuracy and reliability.
+                </p>
+                </div>
+
+            <div class="about-card">
+            <h3>⚙️ How It Works</h3>
+            <ul>
+                <li>Upload an image from the frontend</li>
+                <li>Image is sent to the backend API</li>
+                <li>OCR & preprocessing are applied</li>
+                <li>Text is returned and stored instantly</li>
+            </ul>
+            </div>
+
+            <div class="about-card">
+            <h3>🚀 Key Features</h3>
+            <ul>
+                <li>Backend-powered OCR</li>
+                <li>OpenCV image preprocessing</li>
+                <li>Persistent OCR history</li>
+                <li>Editable & downloadable text</li>
+                <li>Dark mode support</li>
+            </ul>
+            </div>
+
+            <div class="about-card">
+            <h3>👩‍💻 Who It’s For</h3>
+            <p>
+                Perfect for students, educators, professionals, and developers who want
+                to digitize handwritten content or integrate OCR into real-world systems.
+            </p>
+            </div>
+
+            <div class="about-card">
+            <h3>🛠 Technology Stack</h3>
+            <ul>
+                <li><strong>Frontend:</strong> HTML, CSS, JavaScript</li>
+                <li><strong>Backend:</strong> Flask (Python)</li>
+                <li><strong>OCR Engine:</strong> Tesseract OCR</li>
+                <li><strong>Image Processing:</strong> OpenCV</li>
+                <li><strong>Database:</strong> SQLAlchemy</li>
+            </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <script src="app.js"></script>
+</body>
+</html>
