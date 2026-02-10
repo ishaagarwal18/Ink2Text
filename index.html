@@ -576,6 +576,65 @@
                 font-size: 12px;
             }
         }
+        /* -------- NAVBAR HOVER EFFECTS -------- */
+
+        .nav-links a {
+            position: relative;
+            padding: 6px 2px;
+            font-weight: 500;
+        }
+
+        /* animated underline */
+        .nav-links a::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            bottom: -4px;
+            width: 0%;
+            height: 2px;
+            background: linear-gradient(
+                90deg,
+                var(--primary),
+                var(--accent)
+            );
+            transition: width 0.3s ease;
+            border-radius: 2px;
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        /* text glow on hover */
+        .nav-links a:hover {
+            color: var(--foreground);
+        }
+
+        /* active link style */
+        .nav-links a.active {
+            color: var(--foreground);
+        }
+
+        .nav-links a.active::after {
+            width: 100%;
+        }
+
+        /* navbar button hover */
+        .nav-actions button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        /* logo hover */
+        .nav-logo:hover .nav-logo-icon {
+            transform: rotate(-6deg) scale(1.05);
+            box-shadow: 0 10px 25px rgba(93, 74, 142, 0.35);
+        }
+
+        .nav-logo-icon {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
     </style>
 </head>
 <body>
@@ -587,10 +646,11 @@
                 <span>Ink2Text</span>
             </a>
             <div class="nav-links">
-                <a href="#" onclick="goToPage('home'); return false;">Home</a>
-                <a href="#" onclick="goToPage('converter'); return false;">Converter</a>
-                <a href="#" onclick="goToPage('about'); return false;">About</a>
+                <a href="#" onclick="setActiveNav(this); goToPage('home'); return false;">Home</a>
+                <a href="#" onclick="setActiveNav(this); goToPage('converter'); return false;">Converter</a>
+                <a href="#" onclick="setActiveNav(this); goToPage('about'); return false;">About</a>
             </div>
+
             <div class="nav-actions">
                 <div id="authButtons" style="display: flex; gap: 10px;">
                     <button onclick="goToPage('login')">Login</button>
