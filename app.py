@@ -1,105 +1,211 @@
-print(">>> THIS APP.PY IS RUNNING <<<")
+# from flask import Flask, request, jsonify
+# from flask_cors import CORS
+# from config import Config
+# from extensions import db
+# import pytesseract
+# import cv2
+# import numpy as np
+# from PIL import Image
+
+# # 👇 IMPORTANT: set tesseract path (Windows)
+# pytesseract.pytesseract.tesseract_cmd = r"C:\Users\Admin\IdeaProjects\git\Ink2Text\tesseract-ocr-w64-setup-5.5.0.20241111.exe"
+
+
+# def create_app():
+#     app = Flask(__name__)
+#     app.config.from_object(Config)
+
+#     CORS(app)
+#     db.init_app(app)
+
+#     # import models AFTER db init
+#     from models import Document, OCRText
+
+#     with app.app_context():
+#         db.create_all()
+
+#     # ---------------- HOME ----------------
+#     @app.route("/")
+#     def home():
+#         return {"message": "Ink2Text backend running 🚀"}
+
+#     # ---------------- OCR API ----------------
+#     @app.route("/api/ocr", methods=["POST"])
+#     def ocr_image():
+#         file = request.files.get("image")
+
+#         if not file:
+#             return jsonify({"error": "No image uploaded"}), 400
+
+#         # Save document
+#         document = Document(file_name=file.filename)
+#         db.session.add(document)
+#         db.session.commit()
+
+#         # OCR processing
+#         image = Image.open(file.stream).convert("RGB")
+#         img = np.array(image)
+#         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+#         extracted_text = pytesseract.image_to_string(
+#             gray,
+#             config="--oem 3 --psm 6"
+#         )
+
+#         print("OCR OUTPUT:", extracted_text)
+
+#         # Save OCR text
+#         ocr_entry = OCRText(
+#             document_id=document.document_id,
+#             extracted_text=extracted_text,
+#             confidence_score=0.90
+#         )
+#         db.session.add(ocr_entry)
+#         db.session.commit()
+
+#         return jsonify({
+#             "message": "OCR saved successfully",
+#             "document_id": document.document_id,
+#             "text": extracted_text
+#         })
+
+#     # ---------------- HISTORY API ----------------
+#     @app.route("/api/history", methods=["GET"])
+#     def get_ocr_history():
+#         results = (
+#             db.session.query(
+#                 Document.document_id,
+#                 Document.file_name,
+#                 Document.uploaded_at,
+#                 OCRText.extracted_text
+#             )
+#             .join(OCRText, Document.document_id == OCRText.document_id)
+#             .order_by(Document.uploaded_at.desc())
+#             .all()
+#         )
+
+#         history = []
+#         for row in results:
+#             history.append({
+#                 "document_id": row.document_id,
+#                 "file_name": row.file_name,
+#                 "uploaded_at": row.uploaded_at.strftime("%Y-%m-%d %H:%M:%S"),
+#                 "text": row.extracted_text
+#             })
+
+#         return jsonify(history)
+
+#     return app
+
+
+# # ⬇️ THIS MUST BE AT THE VERY BOTTOM
+# app = create_app()
+
+# if __name__ == "__main__":
+#     app.run(debug=True)
+
+
+
+
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from PIL import Image
+from config import Config
+from extensions import db
 import pytesseract
-import numpy as np
 import cv2
-import io
-from datetime import datetime
-import os
-import json
+import numpy as np
+from PIL import Image, UnidentifiedImageError
 
-app = Flask(__name__)
-CORS(app)
+pytesseract.pytesseract.tesseract_cmd = r"C:\Users\Admin\IdeaProjects\git\Ink2Text\tesseract-ocr-w64-setup-5.5.0.20241111.exe"
 
-# ---------------- TESSERACT PATH ----------------
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
-# ---------------- FILES ----------------
-HISTORY_FILE = "history.json"
+def create_app():
+    app = Flask(__name__)
+    app.config.from_object(Config)
 
-if not os.path.exists(HISTORY_FILE):
-    with open(HISTORY_FILE, "w") as f:
-        json.dump([], f)
+    CORS(app)
+    db.init_app(app)
 
-# ---------------- HELPERS ----------------
-def load_history():
-    with open(HISTORY_FILE, "r") as f:
-        return json.load(f)
+    from models import Document, OCRText
 
-def save_history(data):
-    with open(HISTORY_FILE, "w") as f:
-        json.dump(data, f, indent=4)
+    with app.app_context():
+        db.create_all()
 
-# ---------------- ROUTES ----------------
+    # ---------------- HOME ----------------
+    @app.route("/")
+    def home():
+        return {"message": "Ink2Text backend running 🚀"}
 
-@app.route("/")
-def home():
-    return "Ink2Text backend running"
+    # ---------------- OCR ----------------
+    @app.route("/api/ocr", methods=["POST"])
+    def ocr_image():
+        file = request.files.get("image")
 
-# OCR CONVERT
-@app.route("/convert", methods=["POST"])
-def convert():
-    if "image" not in request.files:
-        return jsonify({"text": "No image received"}), 400
+        if not file or file.filename == "":
+            return jsonify({"error": "No image uploaded"}), 400
+        
+        try:
+            image = Image.open(file.stream)
+            image.verify()
+            file.stream.seek(0)
+            image = Image.open(file.stream).convert("RGB")
+        except UnidentifiedImageError:
+            return jsonify({"error": "Invalid image file"}), 400
 
-    file = request.files["image"]
-    image = Image.open(io.BytesIO(file.read())).convert("RGB")
-    img_np = np.array(image)
+        img = np.array(image)
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
-    gray = cv2.threshold(gray, 0, 255,
-                          cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+        extracted_text = pytesseract.image_to_string(gray)
 
-    text = pytesseract.image_to_string(
-        gray,
-        lang="eng",
-        config="--oem 3 --psm 6"
-    )
+        document = Document(file_name=file.filename)
+        db.session.add(document)
+        db.session.commit()
 
-    return jsonify({"text": text})
+        ocr_entry = OCRText(
+            document_id=document.document_id,
+            extracted_text=extracted_text,
+            confidence_score=0.90
+        )
+        db.session.add(ocr_entry)
+        db.session.commit()
 
-# SAVE TEXT
-@app.route("/save", methods=["POST"])
-def save_text():
-    data = request.get_json()
-    text = data.get("text", "").strip()
+        return jsonify({
+            "message": "OCR saved successfully",
+            "document_id": document.document_id,
+            "text": extracted_text
+        })
 
-    if not text:
-        return jsonify({"message": "No text received"}), 400
+    # ---------------- HISTORY ----------------
+    @app.route("/api/history", methods=["GET"])
+    def get_ocr_history():
+        results = (
+            db.session.query(
+                Document.document_id,
+                Document.file_name,
+                Document.uploaded_at,
+                OCRText.extracted_text
+            )
+            .join(OCRText, Document.document_id == OCRText.document_id)
+            .all()
+        )
 
-    history = load_history()
-    history.append({
-        "id": len(history) + 1,
-        "text": text,
-        "datetime": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    })
+        history = []
+        for row in results:
+            history.append({
+                "document_id": row.document_id,
+                "file_name": row.file_name,
+                "uploaded_at": row.uploaded_at.strftime("%Y-%m-%d %H:%M:%S"),
+                "text": row.extracted_text
+            })
 
-    save_history(history)
-    return jsonify({"message": "Text saved successfully"})
+        return jsonify(history)
 
-# GET HISTORY
-@app.route("/history", methods=["GET"])
-def get_history():
-    return jsonify(load_history())
+    return app
 
-# DELETE HISTORY
-@app.route("/delete/<int:entry_id>", methods=["DELETE"])
-def delete_entry(entry_id):
-    history = load_history()
-    new_history = [h for h in history if h["id"] != entry_id]
 
-    if len(new_history) == len(history):
-        return jsonify({"message": "Entry not found"}), 404
+app = create_app()
 
-    for i, item in enumerate(new_history, start=1):
-        item["id"] = i
-
-    save_history(new_history)
-    return jsonify({"message": "Entry deleted successfully"})
-
-# ---------------- RUN ----------------
 if __name__ == "__main__":
+    print(">>> THIS APP.PY IS RUNNING <<<")
     app.run(debug=True)
