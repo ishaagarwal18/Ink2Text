@@ -344,6 +344,13 @@ function toggleHistory() {
     }
 }
 
+function setActiveNav(link) {
+    document.querySelectorAll('.nav-links a')
+        .forEach(a => a.classList.remove('active'));
+    link.classList.add('active');
+}
+
+
 // Initialize App
 document.addEventListener('DOMContentLoaded', () => {
     ThemeManager.init();
