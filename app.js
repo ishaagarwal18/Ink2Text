@@ -86,7 +86,7 @@ const AuthManager = {
 // Backend API Configuration
 const API_BASE_URL = 'http://localhost:5000/api';
 
-// History Manager - Now uses Backend API
+// History Manager - Hybrid (tries backend, falls back to localStorage)
 const HistoryManager = {
     async getHistory() {
         // Only return history if user is logged in
@@ -94,18 +94,20 @@ const HistoryManager = {
         if (!user) return [];
         
         try {
+            // Try to get from backend first
             const response = await fetch(`${API_BASE_URL}/history`);
             const data = await response.json();
             
             if (data.success) {
                 return data.history;
             } else {
-                console.error('Failed to fetch history:', data.error);
-                return [];
+                throw new Error('Backend not available');
             }
         } catch (error) {
-            console.error('Error fetching history:', error);
-            return [];
+            console.log('Backend not available, using localStorage');
+            // Fallback to localStorage
+            const history = localStorage.getItem('ocr-history');
+            return history ? JSON.parse(history) : [];
         }
     },
 
@@ -119,12 +121,23 @@ const HistoryManager = {
         try {
             const history = await this.getHistory();
             
-            // Delete all documents
-            for (const item of history) {
-                await fetch(`${API_BASE_URL}/history/${item.document_id}`, {
-                    method: 'DELETE'
-                });
+            // Try to delete from backend
+            let backendSuccess = false;
+            try {
+                for (const item of history) {
+                    if (item.document_id) {
+                        await fetch(`${API_BASE_URL}/history/${item.document_id}`, {
+                            method: 'DELETE'
+                        });
+                    }
+                }
+                backendSuccess = true;
+            } catch (error) {
+                console.log('Backend not available for deletion');
             }
+            
+            // Also clear localStorage
+            localStorage.removeItem('ocr-history');
             
             this.updateHistoryButton();
             showToast('History cleared', 'success');
@@ -136,9 +149,11 @@ const HistoryManager = {
 
     async loadFromHistory(id) {
         const history = await this.getHistory();
-        const item = history.find(h => h.document_id === parseInt(id));
+        const item = history.find(h => 
+            h.document_id === parseInt(id) || h.id === id
+        );
         if (item) {
-            document.getElementById('extractedText').value = item.text;
+            document.getElementById('extractedText').value = item.text || item.extracted_text;
             showToast('Loaded from history', 'success');
             toggleHistory(); // Close history panel
         }
@@ -490,24 +505,73 @@ async function processImage() {
     btn.innerHTML = '<span class="spinner"></span>Processing...';
 
     try {
-        // Create FormData to send image to backend
-        const formData = new FormData();
-        formData.append('image', converterState.imageFile);
+        // Try backend first
+        const useBackend = false; // Set to true when backend is working
+        
+        if (useBackend) {
+            // Backend processing
+            const formData = new FormData();
+            formData.append('image', converterState.imageFile);
 
-        // Send to backend API
-        const response = await fetch(`${API_BASE_URL}/ocr`, {
-            method: 'POST',
-            body: formData
-        });
+            const response = await fetch(`${API_BASE_URL}/ocr`, {
+                method: 'POST',
+                body: formData
+            });
 
-        const data = await response.json();
+            if (!response.ok) {
+                throw new Error('Backend not available');
+            }
 
-        if (data.success) {
-            document.getElementById('extractedText').value = data.text;
-            await HistoryManager.updateHistoryButton();
-            showToast('Text extracted and saved to database!', 'success');
+            const data = await response.json();
+            if (data.success) {
+                document.getElementById('extractedText').value = data.text;
+                await HistoryManager.updateHistoryButton();
+                showToast('Text extracted and saved to database!', 'success');
+            }
         } else {
-            throw new Error(data.error || 'OCR processing failed');
+            // Client-side processing with Tesseract.js
+            console.log('Using client-side OCR (Tesseract.js)');
+            
+            const { createWorker } = await import('https://cdn.jsdelivr.net/npm/tesseract.js@5.0.4/+esm');
+            const worker = await createWorker('eng');
+            const { data: { text } } = await worker.recognize(converterState.imageData);
+            await worker.terminate();
+
+            document.getElementById('extractedText').value = text;
+            
+            // Save to backend if available, otherwise just show success
+            try {
+                const formData = new FormData();
+                formData.append('image', converterState.imageFile);
+                
+                const response = await fetch(`${API_BASE_URL}/ocr`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    await HistoryManager.updateHistoryButton();
+                    showToast('Text extracted and saved to database!', 'success');
+                } else {
+                    throw new Error('Backend not available');
+                }
+            } catch (backendError) {
+                console.log('Backend not available, using localStorage');
+                // Fallback to localStorage
+                const item = {
+                    id: Date.now().toString(),
+                    text: text,
+                    fileName: converterState.imageFile?.name || 'Untitled',
+                    timestamp: Date.now()
+                };
+                
+                const history = JSON.parse(localStorage.getItem('ocr-history') || '[]');
+                const updated = [item, ...history].slice(0, 20);
+                localStorage.setItem('ocr-history', JSON.stringify(updated));
+                
+                await HistoryManager.updateHistoryButton();
+                showToast('Text extracted! (Saved locally - backend not connected)', 'success');
+            }
         }
     } catch (error) {
         console.error('OCR Error:', error);
@@ -600,13 +664,20 @@ async function toggleHistory() {
             return;
         }
 
-        historyPanel.innerHTML = history.map(item => `
-            <div class="history-item" onclick="HistoryManager.loadFromHistory('${item.document_id}')">
-                <div class="history-item-name">${escapeHtml(item.file_name)}</div>
-                <div class="history-item-preview">${escapeHtml(item.text.slice(0, 50))}...</div>
-                <div class="history-item-time">${item.uploaded_at}</div>
-            </div>
-        `).join('') + '<button onclick="HistoryManager.clearHistory(); toggleHistory()" style="width: 100%; margin-top: 10px; background: #ff6b6b; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer;">Clear All History</button>';
+        historyPanel.innerHTML = history.map(item => {
+            const itemId = item.document_id || item.id;
+            const fileName = item.file_name || item.fileName;
+            const text = item.text || item.extracted_text || '';
+            const timestamp = item.uploaded_at || new Date(item.timestamp).toLocaleDateString();
+            
+            return `
+                <div class="history-item" onclick="HistoryManager.loadFromHistory('${itemId}')">
+                    <div class="history-item-name">${escapeHtml(fileName)}</div>
+                    <div class="history-item-preview">${escapeHtml(text.slice(0, 50))}...</div>
+                    <div class="history-item-time">${timestamp}</div>
+                </div>
+            `;
+        }).join('') + '<button onclick="HistoryManager.clearHistory(); toggleHistory()" style="width: 100%; margin-top: 10px; background: #ff6b6b; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer;">Clear All History</button>';
     }
 }
 
