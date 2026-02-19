@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 import { Copy, Download, RefreshCw, Upload, History, FileDown, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/lib/auth-context';
 import * as Tesseract from 'tesseract.js';
 
 interface HistoryItem {
@@ -26,21 +27,32 @@ export default function OCRConverter() {
   const [showHistory, setShowHistory] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
 
-  // Load history from localStorage on mount
+  // Load history from localStorage on mount (only if user is logged in)
   useEffect(() => {
-    const savedHistory = localStorage.getItem('ocr-history');
-    if (savedHistory) {
-      try {
-        setHistory(JSON.parse(savedHistory));
-      } catch (error) {
-        console.error('[v0] Failed to load history:', error);
+    if (user) {
+      const savedHistory = localStorage.getItem('ocr-history');
+      if (savedHistory) {
+        try {
+          setHistory(JSON.parse(savedHistory));
+        } catch (error) {
+          console.error('[v0] Failed to load history:', error);
+        }
       }
+    } else {
+      // Clear history if user is not logged in
+      setHistory([]);
     }
-  }, []);
+  }, [user]);
 
-  // Save history to localStorage
+  // Save history to localStorage (only if user is logged in)
   const addToHistory = (text: string, fileName: string) => {
+    if (!user) {
+      // Don't save history if user is not logged in
+      return;
+    }
+    
     const newItem: HistoryItem = {
       id: Date.now().toString(),
       text,
@@ -236,24 +248,26 @@ export default function OCRConverter() {
               Upload an image of handwritten text and watch it transform into editable digital text in seconds.
             </p>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowHistory(!showHistory)}
-            className="ml-4 gap-2 bg-transparent"
-          >
-            <History className="w-4 h-4" />
-            <span className="hidden sm:inline">History</span>
-            {history.length > 0 && (
-              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs font-semibold ml-1">
-                {history.length}
-              </span>
-            )}
-          </Button>
+          {user && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowHistory(!showHistory)}
+              className="ml-4 gap-2 bg-transparent"
+            >
+              <History className="w-4 h-4" />
+              <span className="hidden sm:inline">History</span>
+              {history.length > 0 && (
+                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs font-semibold ml-1">
+                  {history.length}
+                </span>
+              )}
+            </Button>
+          )}
         </div>
 
         {/* History Panel */}
-        {showHistory && history.length > 0 && (
+        {user && showHistory && history.length > 0 && (
           <Card className="mb-8 bg-card border border-border">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-foreground">Conversion History</CardTitle>
