@@ -13,14 +13,42 @@ const AuthManager = {
     },
 
     signup(name, email, password) {
-        if (password.length < 8) {
-            showToast('Password must be at least 8 characters', 'error');
+        // Validate password strength
+        const validation = this.validatePasswordStrength(password);
+        if (!validation.isValid) {
+            showToast('Weak Password', validation.message, 'error');
             return false;
         }
+
         const user = { name, email, signupTime: Date.now() };
         localStorage.setItem('user', JSON.stringify(user));
         this.updateUI();
         return true;
+    },
+
+    validatePasswordStrength(password) {
+        const requirements = {
+            length: password.length >= 8,
+            uppercase: /[A-Z]/.test(password),
+            lowercase: /[a-z]/.test(password),
+            number: /[0-9]/.test(password),
+            special: /[!@#$%^&*(),.?":{}|<>]/.test(password)
+        };
+
+        const failedRequirements = [];
+        if (!requirements.length) failedRequirements.push('at least 8 characters');
+        if (!requirements.uppercase) failedRequirements.push('one uppercase letter');
+        if (!requirements.lowercase) failedRequirements.push('one lowercase letter');
+        if (!requirements.number) failedRequirements.push('one number');
+        if (!requirements.special) failedRequirements.push('one special character');
+
+        const isValid = Object.values(requirements).every(req => req);
+
+        return {
+            isValid,
+            requirements,
+            message: isValid ? 'Strong password' : `Password must contain ${failedRequirements.join(', ')}`
+        };
     },
 
     logout() {
@@ -36,21 +64,44 @@ const AuthManager = {
         if (user) {
             authButtons.style.display = 'none';
             logoutButton.style.display = 'block';
+            
+            // Update user info in dropdown
+            const userName = document.getElementById('userNameDropdown');
+            const userEmail = document.getElementById('userEmailDropdown');
+            const userInitial = document.getElementById('userInitial');
+            
+            if (userName) userName.textContent = user.name || user.email.split('@')[0];
+            if (userEmail) userEmail.textContent = user.email;
+            if (userInitial) userInitial.textContent = (user.name || user.email)[0].toUpperCase();
         } else {
             authButtons.style.display = 'flex';
             logoutButton.style.display = 'none';
         }
+        
+        // Update history button visibility
+        HistoryManager.updateHistoryButton();
     }
 };
 
 // History Manager
 const HistoryManager = {
     getHistory() {
+        // Only return history if user is logged in
+        const user = AuthManager.getUser();
+        if (!user) return [];
+        
         const history = localStorage.getItem('ocr-history');
         return history ? JSON.parse(history) : [];
     },
 
     addToHistory(text, fileName) {
+        // Only save history if user is logged in
+        const user = AuthManager.getUser();
+        if (!user) {
+            console.log('History not saved - user not logged in');
+            return;
+        }
+        
         const history = this.getHistory();
         const item = {
             id: Date.now().toString(),
@@ -60,10 +111,13 @@ const HistoryManager = {
         };
         const updated = [item, ...history].slice(0, 20);
         localStorage.setItem('ocr-history', JSON.stringify(updated));
+        this.updateHistoryButton();
     },
 
     clearHistory() {
         localStorage.removeItem('ocr-history');
+        this.updateHistoryButton();
+        showToast('History cleared', 'success');
     },
 
     loadFromHistory(id) {
@@ -72,6 +126,29 @@ const HistoryManager = {
         if (item) {
             document.getElementById('extractedText').value = item.text;
             showToast('Loaded from history', 'success');
+            toggleHistory(); // Close history panel
+        }
+    },
+
+    updateHistoryButton() {
+        const historyBtn = document.querySelector('button[onclick="toggleHistory()"]');
+        if (!historyBtn) return;
+        
+        const user = AuthManager.getUser();
+        const history = this.getHistory();
+        
+        // Show/hide history button based on login status
+        if (user) {
+            historyBtn.style.display = 'inline-flex';
+            // Update button text with count
+            const count = history.length;
+            if (count > 0) {
+                historyBtn.innerHTML = `📜 History (${count})`;
+            } else {
+                historyBtn.innerHTML = '📜 History';
+            }
+        } else {
+            historyBtn.style.display = 'none';
         }
     }
 };
@@ -126,8 +203,49 @@ function toggleTheme() {
 function updateThemeIcon() {
     const btn = document.querySelector('.theme-toggle');
     const isDark = document.documentElement.classList.contains('dark');
-    btn.textContent = isDark ? '☀️' : '🌙';
+    const icon = btn.querySelector('.theme-icon');
+    if (icon) {
+        icon.textContent = isDark ? '☀️' : '🌙';
+    }
 }
+
+// Mobile Menu Functions
+function toggleMobileMenu() {
+    const navLinks = document.getElementById('navLinks');
+    const menuToggle = document.querySelector('.mobile-menu-toggle');
+    
+    navLinks.classList.toggle('show');
+    menuToggle.classList.toggle('active');
+}
+
+function closeMobileMenu() {
+    const navLinks = document.getElementById('navLinks');
+    const menuToggle = document.querySelector('.mobile-menu-toggle');
+    
+    navLinks.classList.remove('show');
+    menuToggle.classList.remove('active');
+}
+
+// User Menu Functions
+function toggleUserMenu() {
+    const dropdown = document.getElementById('userDropdown');
+    dropdown.classList.toggle('show');
+}
+
+function closeUserMenu() {
+    const dropdown = document.getElementById('userDropdown');
+    dropdown.classList.remove('show');
+}
+
+// Close user dropdown when clicking outside
+document.addEventListener('click', (event) => {
+    const userSection = document.querySelector('.user-section');
+    const dropdown = document.getElementById('userDropdown');
+    
+    if (userSection && dropdown && !userSection.contains(event.target)) {
+        dropdown.classList.remove('show');
+    }
+});
 
 // Page Navigation
 function goToPage(pageName) {
@@ -143,12 +261,70 @@ function handleLogin(event) {
     const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
 
+    if (!email || !password) {
+        showToast('Please enter email and password', 'error');
+        return;
+    }
+
+    // Validate password strength for login as well
+    const validation = AuthManager.validatePasswordStrength(password);
+    if (!validation.isValid) {
+        showToast('Invalid Password', 'Password does not meet security requirements. ' + validation.message, 'error');
+        return;
+    }
+
     if (AuthManager.login(email, password)) {
         showToast('Login successful!', 'success');
         document.getElementById('loginEmail').value = '';
         document.getElementById('loginPassword').value = '';
         goToPage('home');
     }
+}
+
+// Password Strength Validator for Login
+function validateLoginPassword() {
+    const password = document.getElementById('loginPassword').value;
+    const strengthBar = document.getElementById('loginPasswordStrength');
+    const requirementsDiv = document.getElementById('loginPasswordRequirements');
+    
+    if (!password) {
+        strengthBar.className = 'password-strength';
+        requirementsDiv.style.display = 'none';
+        resetLoginPasswordRequirements();
+        return;
+    }
+
+    // Show requirements when user starts typing
+    requirementsDiv.style.display = 'block';
+
+    const validation = AuthManager.validatePasswordStrength(password);
+    const requirements = validation.requirements;
+
+    // Update requirement checkmarks
+    document.getElementById('login-req-length').className = requirements.length ? 'valid' : '';
+    document.getElementById('login-req-uppercase').className = requirements.uppercase ? 'valid' : '';
+    document.getElementById('login-req-lowercase').className = requirements.lowercase ? 'valid' : '';
+    document.getElementById('login-req-number').className = requirements.number ? 'valid' : '';
+    document.getElementById('login-req-special').className = requirements.special ? 'valid' : '';
+
+    // Calculate strength
+    const validCount = Object.values(requirements).filter(Boolean).length;
+    
+    if (validCount <= 2) {
+        strengthBar.className = 'password-strength weak';
+    } else if (validCount <= 4) {
+        strengthBar.className = 'password-strength medium';
+    } else {
+        strengthBar.className = 'password-strength strong';
+    }
+}
+
+function resetLoginPasswordRequirements() {
+    document.getElementById('login-req-length').className = '';
+    document.getElementById('login-req-uppercase').className = '';
+    document.getElementById('login-req-lowercase').className = '';
+    document.getElementById('login-req-number').className = '';
+    document.getElementById('login-req-special').className = '';
 }
 
 function handleSignup(event) {
@@ -163,6 +339,13 @@ function handleSignup(event) {
         return;
     }
 
+    // Validate password strength
+    const validation = AuthManager.validatePasswordStrength(password);
+    if (!validation.isValid) {
+        showToast('Weak Password', validation.message, 'error');
+        return;
+    }
+
     if (AuthManager.signup(name, email, password)) {
         showToast('Account created successfully!', 'success');
         document.getElementById('signupName').value = '';
@@ -173,7 +356,50 @@ function handleSignup(event) {
     }
 }
 
+// Password Strength Validator
+function validatePassword() {
+    const password = document.getElementById('signupPassword').value;
+    const strengthBar = document.getElementById('passwordStrength');
+    
+    if (!password) {
+        strengthBar.className = 'password-strength';
+        resetPasswordRequirements();
+        return;
+    }
+
+    const validation = AuthManager.validatePasswordStrength(password);
+    const requirements = validation.requirements;
+
+    // Update requirement checkmarks
+    document.getElementById('req-length').className = requirements.length ? 'valid' : '';
+    document.getElementById('req-uppercase').className = requirements.uppercase ? 'valid' : '';
+    document.getElementById('req-lowercase').className = requirements.lowercase ? 'valid' : '';
+    document.getElementById('req-number').className = requirements.number ? 'valid' : '';
+    document.getElementById('req-special').className = requirements.special ? 'valid' : '';
+
+    // Calculate strength
+    const validCount = Object.values(requirements).filter(Boolean).length;
+    
+    if (validCount <= 2) {
+        strengthBar.className = 'password-strength weak';
+    } else if (validCount <= 4) {
+        strengthBar.className = 'password-strength medium';
+    } else {
+        strengthBar.className = 'password-strength strong';
+    }
+}
+
+function resetPasswordRequirements() {
+    document.getElementById('req-length').className = '';
+    document.getElementById('req-uppercase').className = '';
+    document.getElementById('req-lowercase').className = '';
+    document.getElementById('req-number').className = '';
+    document.getElementById('req-special').className = '';
+}
+
 function logout() {
+    // Clear history when logging out
+    localStorage.removeItem('ocr-history');
     AuthManager.logout();
     showToast('Logged out successfully', 'success');
     goToPage('home');
@@ -252,7 +478,18 @@ async function processImage() {
 
         document.getElementById('extractedText').value = text;
         HistoryManager.addToHistory(text, converterState.imageFile?.name || 'Untitled');
-        showToast('Text extracted successfully!', 'success');
+        HistoryManager.updateHistoryButton(); // Update button after adding to history
+        
+        const user = AuthManager.getUser();
+        if (user) {
+            showToast('Text extracted and saved to history!', 'success');
+        } else {
+            showToast('Text extracted successfully!', 'success');
+            // Show login modal after a short delay
+            setTimeout(() => {
+                showLoginModal();
+            }, 1500);
+        }
     } catch (error) {
         console.error('[v0] OCR Error:', error);
         showToast('Failed to process image. Try a clearer image.', 'error');
@@ -324,24 +561,55 @@ function resetConverter() {
 }
 
 function toggleHistory() {
+    const user = AuthManager.getUser();
+    if (!user) {
+        showLoginModal();
+        return;
+    }
+    
     const historyPanel = document.getElementById('historyPanel');
     historyPanel.classList.toggle('show');
 
     if (historyPanel.classList.contains('show')) {
         const history = HistoryManager.getHistory();
         if (history.length === 0) {
-            historyPanel.innerHTML = '<p style="text-align: center; color: var(--muted-foreground);">No history yet</p>';
+            historyPanel.innerHTML = '<p style="text-align: center; color: var(--muted-foreground); padding: 20px;">No history yet. Start converting images!</p>';
             return;
         }
 
         historyPanel.innerHTML = history.map(item => `
             <div class="history-item" onclick="HistoryManager.loadFromHistory('${item.id}')">
-                <div class="history-item-name">${item.fileName}</div>
-                <div class="history-item-preview">${item.text.slice(0, 50)}...</div>
+                <div class="history-item-name">${escapeHtml(item.fileName)}</div>
+                <div class="history-item-preview">${escapeHtml(item.text.slice(0, 50))}...</div>
                 <div class="history-item-time">${new Date(item.timestamp).toLocaleDateString()}</div>
             </div>
-        `).join('') + '<button onclick="HistoryManager.clearHistory(); toggleHistory()" style="width: 100%; margin-top: 10px; background: #ff6b6b; color: white; border: none;">Clear History</button>';
+        `).join('') + '<button onclick="HistoryManager.clearHistory(); toggleHistory()" style="width: 100%; margin-top: 10px; background: #ff6b6b; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer;">Clear History</button>';
     }
+}
+
+// Login Modal Functions
+function showLoginModal() {
+    const modal = document.getElementById('loginModal');
+    modal.classList.add('show');
+}
+
+function closeLoginModal() {
+    const modal = document.getElementById('loginModal');
+    modal.classList.remove('show');
+}
+
+// Close modal when clicking outside
+window.addEventListener('click', (event) => {
+    const modal = document.getElementById('loginModal');
+    if (event.target === modal) {
+        closeLoginModal();
+    }
+});
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 function setActiveNav(link) {
@@ -355,4 +623,5 @@ function setActiveNav(link) {
 document.addEventListener('DOMContentLoaded', () => {
     ThemeManager.init();
     AuthManager.updateUI();
+    HistoryManager.updateHistoryButton(); // Initialize history button state
 });
