@@ -53,104 +53,320 @@
             position: sticky;
             top: 0;
             z-index: 50;
-            background: rgba(250, 248, 246, 0.8);
-            backdrop-filter: blur(10px);
+            background: rgba(250, 248, 246, 0.95);
+            backdrop-filter: blur(12px);
             border-bottom: 1px solid var(--border);
-            transition: background 0.3s;
+            transition: all 0.3s;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
         }
 
         html.dark nav {
-            background: rgba(30, 26, 23, 0.8);
+            background: rgba(30, 26, 23, 0.95);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
         }
 
         .navbar {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
-            padding: 0 20px;
-            height: 64px;
+            padding: 0 24px;
+            height: 70px;
             display: flex;
             align-items: center;
             justify-content: space-between;
+            gap: 20px;
         }
 
         .nav-logo {
             display: flex;
             align-items: center;
-            gap: 10px;
-            font-size: 20px;
-            font-weight: bold;
+            gap: 12px;
+            font-size: 22px;
+            font-weight: 700;
             color: var(--foreground);
             text-decoration: none;
+            transition: transform 0.3s ease;
+        }
+
+        .nav-logo:hover {
+            transform: translateY(-2px);
         }
 
         .nav-logo-icon {
-            width: 40px;
-            height: 40px;
+            width: 44px;
+            height: 44px;
             background: linear-gradient(135deg, var(--primary), var(--accent));
-            border-radius: 8px;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(93, 74, 142, 0.3);
+        }
+
+        .nav-logo:hover .nav-logo-icon {
+            transform: rotate(-5deg) scale(1.05);
+            box-shadow: 0 6px 20px rgba(93, 74, 142, 0.4);
+        }
+
+        .nav-logo-icon svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .nav-logo-text {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
         .nav-links {
             display: flex;
-            gap: 30px;
+            gap: 20px;
             align-items: center;
+            flex: 1;
+            justify-content: center;
         }
 
         .nav-links a {
+            display: flex;
+            align-items: center;
+            gap: 6px;
             color: var(--muted-foreground);
             text-decoration: none;
-            font-size: 14px;
-            transition: color 0.3s;
+            font-size: 15px;
+            font-weight: 500;
+            padding: 10px 18px;
+            border-radius: 8px;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .nav-links a .nav-icon {
+            font-size: 16px;
+            transition: transform 0.3s;
         }
 
         .nav-links a:hover {
             color: var(--foreground);
+            background: var(--muted);
+        }
+
+        .nav-links a:hover .nav-icon {
+            transform: scale(1.2);
+        }
+
+        .nav-links a.active {
+            color: var(--primary);
+            background: rgba(93, 74, 142, 0.1);
+        }
+
+        html.dark .nav-links a.active {
+            background: rgba(168, 159, 217, 0.15);
         }
 
         .nav-actions {
             display: flex;
-            gap: 15px;
+            gap: 12px;
             align-items: center;
         }
 
-        button {
-            padding: 8px 16px;
+        .auth-buttons {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .btn-login {
+            padding: 9px 20px;
             border: 1px solid var(--border);
-            border-radius: 6px;
+            border-radius: 8px;
             background: transparent;
             color: var(--foreground);
             cursor: pointer;
             font-size: 14px;
+            font-weight: 500;
             transition: all 0.3s;
         }
 
-        button.primary {
-            background: var(--primary);
-            color: var(--primary-foreground);
-            border: none;
-        }
-
-        button.primary:hover {
-            opacity: 0.9;
-        }
-
-        button:hover {
+        .btn-login:hover {
+            background: var(--muted);
             border-color: var(--foreground);
+            transform: translateY(-2px);
+        }
+
+        .btn-signup {
+            padding: 9px 20px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(93, 74, 142, 0.3);
+        }
+
+        .btn-signup:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(93, 74, 142, 0.4);
+        }
+
+        /* User Section */
+        .user-section {
+            position: relative;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 2px 8px rgba(93, 74, 142, 0.3);
+        }
+
+        .user-avatar:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 16px rgba(93, 74, 142, 0.4);
+        }
+
+        .user-dropdown {
+            position: absolute;
+            top: calc(100% + 12px);
+            right: 0;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            min-width: 220px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s;
+            z-index: 100;
+        }
+
+        .user-dropdown.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .user-info-dropdown {
+            padding: 16px;
+        }
+
+        .user-name {
+            font-weight: 600;
+            color: var(--foreground);
+            font-size: 15px;
+            margin-bottom: 4px;
+        }
+
+        .user-email {
+            font-size: 13px;
+            color: var(--muted-foreground);
+        }
+
+        .dropdown-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 8px 0;
+        }
+
+        .dropdown-item {
+            width: 100%;
+            padding: 12px 16px;
+            background: transparent;
+            border: none;
+            text-align: left;
+            color: var(--foreground);
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .dropdown-item:hover {
+            background: var(--muted);
+        }
+
+        .dropdown-item:first-of-type {
+            border-radius: 12px 12px 0 0;
+        }
+
+        .dropdown-item:last-of-type {
+            border-radius: 0 0 12px 12px;
+        }
+
+        .logout-item {
+            color: var(--destructive);
+        }
+
+        .logout-item:hover {
+            background: rgba(220, 38, 38, 0.1);
         }
 
         .theme-toggle {
-            width: 40px;
-            height: 40px;
+            width: 44px;
+            height: 44px;
             padding: 0;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 18px;
+            font-size: 20px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--card);
+            transition: all 0.3s;
+        }
+
+        .theme-toggle:hover {
+            background: var(--muted);
+            transform: rotate(15deg) scale(1.1);
+        }
+
+        /* Mobile Menu Toggle */
+        .mobile-menu-toggle {
+            display: none;
+            flex-direction: column;
+            gap: 5px;
+            background: transparent;
+            border: none;
+            padding: 8px;
+            cursor: pointer;
+        }
+
+        .mobile-menu-toggle span {
+            width: 24px;
+            height: 2px;
+            background: var(--foreground);
+            border-radius: 2px;
+            transition: all 0.3s;
+        }
+
+        .mobile-menu-toggle.active span:nth-child(1) {
+            transform: rotate(45deg) translate(7px, 7px);
+        }
+
+        .mobile-menu-toggle.active span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .mobile-menu-toggle.active span:nth-child(3) {
+            transform: rotate(-45deg) translate(7px, -7px);
         }
 
         /* Main content */
@@ -305,6 +521,55 @@
         .auth-link a {
             color: var(--primary);
             text-decoration: none;
+        }
+
+        /* Password Strength Indicator */
+        .password-strength {
+            height: 4px;
+            background: var(--muted);
+            border-radius: 2px;
+            margin-top: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .password-strength::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 0%;
+            transition: all 0.3s;
+            border-radius: 2px;
+        }
+
+        .password-strength.weak::before {
+            width: 33%;
+            background: #ef4444;
+        }
+
+        .password-strength.medium::before {
+            width: 66%;
+            background: #f59e0b;
+        }
+
+        .password-strength.strong::before {
+            width: 100%;
+            background: #10b981;
+        }
+
+        .password-requirements ul li {
+            transition: color 0.3s;
+        }
+
+        .password-requirements ul li.valid {
+            color: #10b981;
+        }
+
+        .password-requirements ul li.valid::before {
+            content: '✓ ';
+            font-weight: bold;
         }
 
         /* Converter Page */
@@ -564,7 +829,56 @@
             }
 
             .nav-links {
+                position: fixed;
+                top: 70px;
+                left: 0;
+                right: 0;
+                background: var(--card);
+                flex-direction: column;
+                padding: 20px;
+                gap: 8px;
+                border-bottom: 1px solid var(--border);
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+                transform: translateY(-100%);
+                opacity: 0;
+                visibility: hidden;
+                transition: all 0.3s;
+            }
+
+            .nav-links.show {
+                transform: translateY(0);
+                opacity: 1;
+                visibility: visible;
+            }
+
+            .nav-links a {
+                width: 100%;
+                justify-content: flex-start;
+                padding: 14px 18px;
+            }
+
+            .mobile-menu-toggle {
+                display: flex;
+            }
+
+            .auth-buttons {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .btn-login,
+            .btn-signup {
+                padding: 8px 16px;
+                font-size: 13px;
+            }
+
+            .nav-logo-text {
                 display: none;
+            }
+
+            .navbar {
+                padding: 0 16px;
+                height: 70px;
             }
 
             .hero h1 {
@@ -575,6 +889,31 @@
                 padding: 8px 12px;
                 font-size: 12px;
             }
+        }
+
+        button {
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: transparent;
+            color: var(--foreground);
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        button.primary {
+            background: var(--primary);
+            color: var(--primary-foreground);
+            border: none;
+        }
+
+        button.primary:hover {
+            opacity: 0.9;
+        }
+
+        button:hover {
+            border-color: var(--foreground);
         }
         /* -------- NAVBAR HOVER EFFECTS -------- */
 
@@ -635,6 +974,87 @@
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
 
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: var(--card);
+            padding: 40px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            max-width: 450px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.3s ease;
+            position: relative;
+        }
+
+        .modal-content h2 {
+            margin-bottom: 15px;
+            color: var(--foreground);
+            font-size: 24px;
+        }
+
+        .modal-content p {
+            color: var(--muted-foreground);
+            margin-bottom: 20px;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 28px;
+            font-weight: bold;
+            color: var(--muted-foreground);
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .modal-close:hover {
+            color: var(--foreground);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -642,24 +1062,68 @@
     <nav>
         <div class="navbar">
             <a href="#" class="nav-logo" onclick="goToPage('home'); return false;">
-                <div class="nav-logo-icon">⚡</div>
-                <span>Ink2Text</span>
+                <div class="nav-logo-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <span class="nav-logo-text">Ink2Text</span>
             </a>
-            <div class="nav-links">
-                <a href="#" onclick="setActiveNav(this); goToPage('home'); return false;">Home</a>
-                <a href="#" onclick="setActiveNav(this); goToPage('converter'); return false;">Converter</a>
-                <a href="#" onclick="setActiveNav(this); goToPage('about'); return false;">About</a>
+            
+            <!-- Mobile Menu Toggle -->
+            <button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+
+            <div class="nav-links" id="navLinks">
+                <a href="#" class="active" onclick="setActiveNav(this); goToPage('home'); closeMobileMenu(); return false;">
+                    <span class="nav-icon">🏠</span>
+                    <span>Home</span>
+                </a>
+                <a href="#" onclick="setActiveNav(this); goToPage('converter'); closeMobileMenu(); return false;">
+                    <span class="nav-icon">🔄</span>
+                    <span>Converter</span>
+                </a>
+                <a href="#" onclick="setActiveNav(this); goToPage('about'); closeMobileMenu(); return false;">
+                    <span class="nav-icon">ℹ️</span>
+                    <span>About</span>
+                </a>
             </div>
 
             <div class="nav-actions">
-                <div id="authButtons" style="display: flex; gap: 10px;">
-                    <button onclick="goToPage('login')">Login</button>
-                    <button class="primary" onclick="goToPage('signup')">Sign Up</button>
+                <div id="authButtons" class="auth-buttons">
+                    <button class="btn-login" onclick="goToPage('login')">Login</button>
+                    <button class="btn-signup primary" onclick="goToPage('signup')">Sign Up</button>
                 </div>
-                <div id="logoutButton" style="display: none;">
-                    <button class="primary" onclick="logout()">Logout</button>
+                <div id="logoutButton" class="user-section" style="display: none;">
+                    <div class="user-avatar" onclick="toggleUserMenu()">
+                        <span id="userInitial">U</span>
+                    </div>
+                    <div class="user-dropdown" id="userDropdown">
+                        <div class="user-info-dropdown">
+                            <div class="user-name" id="userNameDropdown">User</div>
+                            <div class="user-email" id="userEmailDropdown">user@example.com</div>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <button class="dropdown-item" onclick="goToPage('converter'); closeUserMenu();">
+                            <span>🔄</span> Converter
+                        </button>
+                        <button class="dropdown-item" onclick="toggleHistory(); closeUserMenu();">
+                            <span>📜</span> History
+                        </button>
+                        <div class="dropdown-divider"></div>
+                        <button class="dropdown-item logout-item" onclick="logout(); closeUserMenu();">
+                            <span>🚪</span> Logout
+                        </button>
+                    </div>
                 </div>
-                <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">🌙</button>
+                <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">
+                    <span class="theme-icon">🌙</span>
+                </button>
             </div>
         </div>
     </nav>
@@ -723,7 +1187,18 @@
                         </div>
                         <div class="form-group">
                             <label>Password</label>
-                            <input type="password" id="loginPassword" required>
+                            <input type="password" id="loginPassword" required minlength="8" oninput="validateLoginPassword()">
+                            <div class="password-strength" id="loginPasswordStrength"></div>
+                            <div class="password-requirements" id="loginPasswordRequirements" style="display: none;">
+                                <p style="font-size: 12px; color: var(--muted-foreground); margin-top: 8px; margin-bottom: 8px;">Password strength:</p>
+                                <ul style="font-size: 12px; color: var(--muted-foreground); margin-left: 20px; line-height: 1.6;">
+                                    <li id="login-req-length">At least 8 characters</li>
+                                    <li id="login-req-uppercase">One uppercase letter</li>
+                                    <li id="login-req-lowercase">One lowercase letter</li>
+                                    <li id="login-req-number">One number</li>
+                                    <li id="login-req-special">One special character (!@#$%^&*)</li>
+                                </ul>
+                            </div>
                         </div>
                         <button type="submit" class="auth-submit">Login</button>
                     </form>
@@ -750,7 +1225,18 @@
                         </div>
                         <div class="form-group">
                             <label>Password</label>
-                            <input type="password" id="signupPassword" required minlength="8">
+                            <input type="password" id="signupPassword" required minlength="8" oninput="validatePassword()">
+                            <div class="password-strength" id="passwordStrength"></div>
+                            <div class="password-requirements">
+                                <p style="font-size: 12px; color: var(--muted-foreground); margin-top: 8px; margin-bottom: 8px;">Password must contain:</p>
+                                <ul style="font-size: 12px; color: var(--muted-foreground); margin-left: 20px; line-height: 1.6;">
+                                    <li id="req-length">At least 8 characters</li>
+                                    <li id="req-uppercase">One uppercase letter</li>
+                                    <li id="req-lowercase">One lowercase letter</li>
+                                    <li id="req-number">One number</li>
+                                    <li id="req-special">One special character (!@#$%^&*)</li>
+                                </ul>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label>Confirm Password</label>
@@ -863,6 +1349,19 @@
         </div>
     </div>
 </div>
+
+    <!-- Login Prompt Modal -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeLoginModal()">&times;</span>
+            <h2>🔒 Login Required</h2>
+            <p>Please login to save your conversion history and access this feature.</p>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="primary" onclick="closeLoginModal(); goToPage('login')">Login</button>
+                <button onclick="closeLoginModal(); goToPage('signup')">Sign Up</button>
+            </div>
+        </div>
+    </div>
 
     <script src="app.js"></script>
 </body>
