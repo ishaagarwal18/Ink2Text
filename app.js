@@ -83,46 +83,60 @@ const AuthManager = {
     }
 };
 
-// History Manager
+// Backend API Configuration
+const API_BASE_URL = 'http://localhost:5000/api';
+
+// History Manager - Now uses Backend API
 const HistoryManager = {
-    getHistory() {
+    async getHistory() {
         // Only return history if user is logged in
         const user = AuthManager.getUser();
         if (!user) return [];
         
-        const history = localStorage.getItem('ocr-history');
-        return history ? JSON.parse(history) : [];
-    },
-
-    addToHistory(text, fileName) {
-        // Only save history if user is logged in
-        const user = AuthManager.getUser();
-        if (!user) {
-            console.log('History not saved - user not logged in');
-            return;
+        try {
+            const response = await fetch(`${API_BASE_URL}/history`);
+            const data = await response.json();
+            
+            if (data.success) {
+                return data.history;
+            } else {
+                console.error('Failed to fetch history:', data.error);
+                return [];
+            }
+        } catch (error) {
+            console.error('Error fetching history:', error);
+            return [];
         }
-        
-        const history = this.getHistory();
-        const item = {
-            id: Date.now().toString(),
-            text,
-            fileName,
-            timestamp: Date.now()
-        };
-        const updated = [item, ...history].slice(0, 20);
-        localStorage.setItem('ocr-history', JSON.stringify(updated));
+    },
+
+    async addToHistory(text, fileName) {
+        // History is automatically saved by backend when OCR is processed
+        // This method is kept for compatibility but doesn't need to do anything
         this.updateHistoryButton();
     },
 
-    clearHistory() {
-        localStorage.removeItem('ocr-history');
-        this.updateHistoryButton();
-        showToast('History cleared', 'success');
+    async clearHistory() {
+        try {
+            const history = await this.getHistory();
+            
+            // Delete all documents
+            for (const item of history) {
+                await fetch(`${API_BASE_URL}/history/${item.document_id}`, {
+                    method: 'DELETE'
+                });
+            }
+            
+            this.updateHistoryButton();
+            showToast('History cleared', 'success');
+        } catch (error) {
+            console.error('Error clearing history:', error);
+            showToast('Failed to clear history', 'error');
+        }
     },
 
-    loadFromHistory(id) {
-        const history = this.getHistory();
-        const item = history.find(h => h.id === id);
+    async loadFromHistory(id) {
+        const history = await this.getHistory();
+        const item = history.find(h => h.document_id === parseInt(id));
         if (item) {
             document.getElementById('extractedText').value = item.text;
             showToast('Loaded from history', 'success');
@@ -130,12 +144,12 @@ const HistoryManager = {
         }
     },
 
-    updateHistoryButton() {
+    async updateHistoryButton() {
         const historyBtn = document.querySelector('button[onclick="toggleHistory()"]');
         if (!historyBtn) return;
         
         const user = AuthManager.getUser();
-        const history = this.getHistory();
+        const history = await this.getHistory();
         
         // Show/hide history button based on login status
         if (user) {
@@ -398,8 +412,7 @@ function resetPasswordRequirements() {
 }
 
 function logout() {
-    // Clear history when logging out
-    localStorage.removeItem('ocr-history');
+    // Clear history when logging out (no need to clear from DB, just local state)
     AuthManager.logout();
     showToast('Logged out successfully', 'success');
     goToPage('home');
@@ -465,34 +478,40 @@ async function processImage() {
         return;
     }
 
+    const user = AuthManager.getUser();
+    if (!user) {
+        showToast('Please login to use OCR', 'error');
+        showLoginModal();
+        return;
+    }
+
     const btn = document.getElementById('processBtn');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span>Processing...';
 
     try {
-        // Load Tesseract.js
-        const { createWorker } = await import('https://cdn.jsdelivr.net/npm/tesseract.js@5.0.4/+esm');
-        const worker = await createWorker('eng');
-        const { data: { text } } = await worker.recognize(converterState.imageData);
-        await worker.terminate();
+        // Create FormData to send image to backend
+        const formData = new FormData();
+        formData.append('image', converterState.imageFile);
 
-        document.getElementById('extractedText').value = text;
-        HistoryManager.addToHistory(text, converterState.imageFile?.name || 'Untitled');
-        HistoryManager.updateHistoryButton(); // Update button after adding to history
-        
-        const user = AuthManager.getUser();
-        if (user) {
-            showToast('Text extracted and saved to history!', 'success');
+        // Send to backend API
+        const response = await fetch(`${API_BASE_URL}/ocr`, {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            document.getElementById('extractedText').value = data.text;
+            await HistoryManager.updateHistoryButton();
+            showToast('Text extracted and saved to database!', 'success');
         } else {
-            showToast('Text extracted successfully!', 'success');
-            // Show login modal after a short delay
-            setTimeout(() => {
-                showLoginModal();
-            }, 1500);
+            throw new Error(data.error || 'OCR processing failed');
         }
     } catch (error) {
-        console.error('[v0] OCR Error:', error);
-        showToast('Failed to process image. Try a clearer image.', 'error');
+        console.error('OCR Error:', error);
+        showToast('Failed to process image: ' + error.message, 'error');
     } finally {
         btn.disabled = false;
         btn.innerHTML = '🔄 Process';
@@ -560,7 +579,7 @@ function resetConverter() {
     document.getElementById('extractedText').value = '';
 }
 
-function toggleHistory() {
+async function toggleHistory() {
     const user = AuthManager.getUser();
     if (!user) {
         showLoginModal();
@@ -571,19 +590,23 @@ function toggleHistory() {
     historyPanel.classList.toggle('show');
 
     if (historyPanel.classList.contains('show')) {
-        const history = HistoryManager.getHistory();
+        // Show loading
+        historyPanel.innerHTML = '<p style="text-align: center; color: var(--muted-foreground); padding: 20px;">Loading history...</p>';
+        
+        const history = await HistoryManager.getHistory();
+        
         if (history.length === 0) {
             historyPanel.innerHTML = '<p style="text-align: center; color: var(--muted-foreground); padding: 20px;">No history yet. Start converting images!</p>';
             return;
         }
 
         historyPanel.innerHTML = history.map(item => `
-            <div class="history-item" onclick="HistoryManager.loadFromHistory('${item.id}')">
-                <div class="history-item-name">${escapeHtml(item.fileName)}</div>
+            <div class="history-item" onclick="HistoryManager.loadFromHistory('${item.document_id}')">
+                <div class="history-item-name">${escapeHtml(item.file_name)}</div>
                 <div class="history-item-preview">${escapeHtml(item.text.slice(0, 50))}...</div>
-                <div class="history-item-time">${new Date(item.timestamp).toLocaleDateString()}</div>
+                <div class="history-item-time">${item.uploaded_at}</div>
             </div>
-        `).join('') + '<button onclick="HistoryManager.clearHistory(); toggleHistory()" style="width: 100%; margin-top: 10px; background: #ff6b6b; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer;">Clear History</button>';
+        `).join('') + '<button onclick="HistoryManager.clearHistory(); toggleHistory()" style="width: 100%; margin-top: 10px; background: #ff6b6b; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer;">Clear All History</button>';
     }
 }
 
