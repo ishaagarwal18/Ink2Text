@@ -4,7 +4,7 @@ class Config:
     # PostgreSQL Database Configuration
     SQLALCHEMY_DATABASE_URI = os.getenv(
         "DATABASE_URL",
-        "postgresql://postgres:123@localhost:5432/ink2text_db"
+        "postgresql://postgres:Isha@9638@localhost:5432/ink2text_db"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ECHO = True  # Shows SQL queries in console for debugging

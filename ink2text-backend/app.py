@@ -187,6 +187,7 @@ def create_app():
                 OCRText.extracted_text
             )
             .join(OCRText, Document.document_id == OCRText.document_id)
+            .order_by(Document.uploaded_at.desc())
             .all()
         )
 
@@ -199,7 +200,21 @@ def create_app():
                 "text": row.extracted_text
             })
 
-        return jsonify(history)
+        return jsonify({"success": True, "history": history})
+    
+    # ---------------- DELETE HISTORY ITEM ----------------
+    @app.route("/api/history/<int:document_id>", methods=["DELETE"])
+    def delete_history_item(document_id):
+        try:
+            # Delete OCR text first (foreign key constraint)
+            OCRText.query.filter_by(document_id=document_id).delete()
+            # Then delete document
+            Document.query.filter_by(document_id=document_id).delete()
+            db.session.commit()
+            return jsonify({"success": True, "message": "History item deleted"})
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"success": False, "error": str(e)}), 500
 
     return app
 
