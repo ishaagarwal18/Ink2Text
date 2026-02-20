@@ -681,6 +681,7 @@ async function toggleHistory() {
     }
 }
 
+<<<<<<< HEAD
 // Login Modal Functions
 function showLoginModal() {
     const modal = document.getElementById('loginModal');
@@ -706,6 +707,8 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+=======
+>>>>>>> 12cecc9ca26b745370ce5db6b4f17987d5d46110
 function setActiveNav(link) {
     document.querySelectorAll('.nav-links a')
         .forEach(a => a.classList.remove('active'));
